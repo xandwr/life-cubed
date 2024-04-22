@@ -1,5 +1,11 @@
 use bevy::prelude::*;
 
+
+// Cube generation settings
+const DIMENSIONS: CubeArrayDimensions = CubeArrayDimensions { width: 5, height: 5, depth: 5 };
+const BLOCK_SPACING: f32 = 0.15;
+
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -7,37 +13,64 @@ fn main() {
         .run();
 }
 
+
 fn setup(
+    mut commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<StandardMaterial>>,
+) {
+    // Camera
+    commands.spawn(Camera3dBundle {
+            transform: Transform::from_xyz(10.0, 10.0, 10.0)
+                .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
+            ..default()
+        });
+
+    // Lighting
+    commands.spawn(SpotLightBundle {
+        spot_light: SpotLight {
+            color: Color::WHITE,
+            intensity: 100.0,
+            ..default()
+        },
+        transform: Transform::from_xyz(1.0, 2.0, 1.0),
+        ..default()
+    });
+
+    // Cube Generation
+    generate_cubes(commands, meshes, materials, DIMENSIONS, BLOCK_SPACING);
+}
+
+
+struct CubeArrayDimensions {
+    width: i32,
+    height: i32,
+    depth: i32
+}
+
+
+fn generate_cubes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    dimensions: CubeArrayDimensions,
+    block_spacing: f32,
 ) {
-    // Circular base
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Circle::new(4.0)),
-        material: materials.add(Color::WHITE),
-        transform: Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
-        ..default()
-    });
-    // Cube
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
-        material: materials.add(Color::rgb_u8(180, 190, 254)),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        ..default()
-    });
-    // Light
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..default()
-    });
-    // Camera
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.5, 4.5, 9.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
+    let cube = meshes.add(Cuboid::new(1.0, 1.0, 1.0));
+    for x in 0..dimensions.width {
+        for y in 0..dimensions.height {
+            for z in -dimensions.depth..0 {
+                commands.spawn(PbrBundle {
+                    mesh: cube.clone(),
+                    material: materials.add(Color::WHITE),
+                    transform: Transform::from_translation(Vec3::new(
+                        x as f32 * (1.0 + block_spacing), 
+                        y as f32 * (1.0 + block_spacing), 
+                        z as f32 * (1.0 + block_spacing)
+                    )),
+                    ..default()
+                });
+            }
+        }
+    }
 }
