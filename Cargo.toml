@@ -17,3 +17,4 @@ opt-level = 3
 [dependencies]
 bevy = { version = "0.13.0", features = ["dynamic_linking"] }
 rand = { version = "*" }
+bevy_atmosphere = { version = "*" }
