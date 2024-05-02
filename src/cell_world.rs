@@ -103,34 +103,45 @@ fn spawn_cuboids(
     }
 }
 
+/// Updates the cell grid based on a set tick speed.
 fn update_cell_grid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     cell_grid: Res<CellGrid>,
-    query: Query<Entity, With<CellMesh>>
+    query: Query<Entity, With<CellMesh>>,
+    time: Res<Time>,
+    mut update_timer: Local<f32>
 ) {
-    for entity in query.iter() {
-        commands.entity(entity).despawn_recursive();
-    }
+    // Timer to slow down the speed of the update cycle
+    *update_timer += time.delta_seconds();
 
-    for x in 0..cell_grid.grid.len() {
-        for y in 0..cell_grid.grid[x].len() {
-            for z in 0..cell_grid.grid[x][y].len() {
-                let mut cell = cell_grid.grid[x][y][z].clone();
-                cell.is_alive = thread_rng().gen_bool(1.0 / 1000.0);
-                if cell.is_alive {
-                    commands.spawn((
-                        PbrBundle {
-                            mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
-                            material: materials.add(cell.color),
-                            transform: Transform::from_translation(cell.position),
-                            ..default()
-                        },
-                        CellMesh
-                    ));
+    // The tick speed in seconds
+    // Currently updates the game loop every 1/5th of a second
+    if *update_timer >= 0.2 {
+        for entity in query.iter() {
+            commands.entity(entity).despawn_recursive();
+        }
+    
+        for x in 0..cell_grid.grid.len() {
+            for y in 0..cell_grid.grid[x].len() {
+                for z in 0..cell_grid.grid[x][y].len() {
+                    let mut cell = cell_grid.grid[x][y][z].clone();
+                    cell.is_alive = thread_rng().gen_bool(1.0 / 1000.0);
+                    if cell.is_alive {
+                        commands.spawn((
+                            PbrBundle {
+                                mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
+                                material: materials.add(cell.color),
+                                transform: Transform::from_translation(cell.position),
+                                ..default()
+                            },
+                            CellMesh
+                        ));
+                    }
                 }
             }
         }
+        *update_timer = 0.0; // Reset the update timer to repeat the cycle
     }
 }
