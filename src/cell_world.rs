@@ -16,6 +16,9 @@ pub struct CellGrid {
     pub grid: Vec<Vec<Vec<Cell>>>
 }
 
+#[derive(Component)]
+struct CellMesh;
+
 /// Manages the global world settings.
 #[derive(Resource, ExtractResource, Debug, Clone, Copy)]
 pub struct CellWorldSettings {
@@ -40,7 +43,8 @@ impl Plugin for CellWorldPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(CellWorldSettings::default())
             .add_systems(Startup, initialize_cell_grid)
-            .add_systems(Startup, spawn_cuboids.after(initialize_cell_grid));
+            .add_systems(Startup, spawn_cuboids.after(initialize_cell_grid))
+            .add_systems(Update, update_cell_grid);
     }
 }
 
@@ -84,12 +88,47 @@ fn spawn_cuboids(
             for z in 0..cell_grid.grid[x][y].len() {
                 let cell = &cell_grid.grid[x][y][z];
                 if cell.is_alive {
-                    commands.spawn(PbrBundle {
-                        mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
-                        material: materials.add(cell.color),
-                        transform: Transform::from_translation(cell.position),
-                        ..default()
-                    });
+                    commands.spawn((
+                        PbrBundle {
+                            mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
+                            material: materials.add(cell.color),
+                            transform: Transform::from_translation(cell.position),
+                            ..default()
+                        },
+                        CellMesh
+                    ));
+                }
+            }
+        }
+    }
+}
+
+fn update_cell_grid(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    cell_grid: Res<CellGrid>,
+    query: Query<Entity, With<CellMesh>>
+) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+
+    for x in 0..cell_grid.grid.len() {
+        for y in 0..cell_grid.grid[x].len() {
+            for z in 0..cell_grid.grid[x][y].len() {
+                let mut cell = cell_grid.grid[x][y][z].clone();
+                cell.is_alive = thread_rng().gen_bool(1.0 / 1000.0);
+                if cell.is_alive {
+                    commands.spawn((
+                        PbrBundle {
+                            mesh: meshes.add(Cuboid::new(1.0, 1.0, 1.0)),
+                            material: materials.add(cell.color),
+                            transform: Transform::from_translation(cell.position),
+                            ..default()
+                        },
+                        CellMesh
+                    ));
                 }
             }
         }
